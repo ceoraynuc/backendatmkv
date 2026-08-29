@@ -5,6 +5,7 @@
     "lib": ["ES2020"],
     "strict": true,
     "baseUrl": "./",
+    "ignoreDeprecations": "5.0",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
