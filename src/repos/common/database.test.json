@@ -1,1 +1,22 @@
-{"users":[{"id":886947272827,"name":"Bill","email":"sean.maxwell@gmail.com","created":"2026-08-29T13:56:58.056Z"},{"id":144304732273,"name":"John Smith","email":"john.smith@gmail.com","created":"2026-08-29T13:56:58.056Z"},{"id":133791672880,"name":"Gordan Freeman","email":"gordan.freeman@gmail.com","created":"2026-08-29T13:56:58.056Z"}]}
+{
+    "users": [
+        {
+            "id": 886947272827,
+            "name": "Bill",
+            "email": "sean.maxwell@gmail.com",
+            "created": "2026-08-29T13:56:58.056Z"
+        },
+        {
+            "id": 144304732273,
+            "name": "John Smith",
+            "email": "john.smith@gmail.com",
+            "created": "2026-08-29T13:56:58.056Z"
+        },
+        {
+            "id": 133791672880,
+            "name": "Gordan Freeman",
+            "email": "gordan.freeman@gmail.com",
+            "created": "2026-08-29T13:56:58.056Z"
+        }
+    ]
+}

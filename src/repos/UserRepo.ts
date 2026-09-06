@@ -115,6 +115,31 @@ async function insertMultiple(
   return usersF;
 }
 
+
+/**
+ * Update authentication-related fields.
+ */
+async function updateAuth(user: IUser): Promise<void> {
+  const db = await orm.openDb();
+
+  for (let i = 0; i < db.users.length; i++) {
+    if (db.users[i].id === user.id) {
+      db.users[i] = {
+        ...db.users[i],
+        name: user.name,
+        email: user.email,
+        passwordHash: user.passwordHash,
+        role: user.role,
+        status: user.status,
+        resetTokenHash: user.resetTokenHash,
+        resetTokenExpiresAt: user.resetTokenExpiresAt,
+      };
+
+      return orm.saveDb(db);
+    }
+  }
+}
+
 /******************************************************************************
                                 Export default
 ******************************************************************************/
@@ -125,6 +150,7 @@ export default {
   getAll,
   add,
   update,
+  updateAuth,
   delete: delete_,
   deleteAllUsers,
   insertMultiple,

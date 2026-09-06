@@ -10,6 +10,9 @@ import BaseRouter from '@src/routes/apiRouter';
 
 import EnvVars, { NodeEnvs } from './common/constants/env';
 
+import cookieParser from 'cookie-parser';
+import { requireAdminPage } from './common/middleware/authMiddleware';
+
 /******************************************************************************
                                 Setup
 ******************************************************************************/
@@ -21,6 +24,8 @@ const app = express();
 // Basic middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(cookieParser());
 
 // Show routes called in console during development
 if (EnvVars.NodeEnv === NodeEnvs.DEV) {
@@ -62,13 +67,39 @@ app.get('/', (_: Request, res: Response) => {
 });
 
 // Admin dashboard frontend
-app.get('/admin', (_: Request, res: Response) => {
-  return res.sendFile('admin.html', { root: viewsDir });
+app.get('/admin/logout', (_: Request, res: Response) => {
+  res.clearCookie('admin_access_token');
+  return res.redirect('/admin/login');
 });
 
-app.get('/admin/dashboard', (_: Request, res: Response) => {
-  return res.sendFile('admin.html', { root: viewsDir });
+app.get('/admin/login', (_: Request, res: Response) => {
+  return res.sendFile('admin-login.html', { root: viewsDir });
 });
+
+
+app.get('/admin/forgot-password', (_: Request, res: Response) => {
+  return res.sendFile('admin-forgot-password.html', { root: viewsDir });
+});
+
+app.get('/admin/reset-password', (_: Request, res: Response) => {
+  return res.sendFile('admin-reset-password.html', { root: viewsDir });
+});
+
+app.get(
+  '/admin',
+  requireAdminPage,
+  (_: Request, res: Response) => {
+    return res.sendFile('admin.html', { root: viewsDir });
+  },
+);
+
+app.get(
+  '/admin/dashboard',
+  requireAdminPage,
+  (_: Request, res: Response) => {
+    return res.sendFile('admin.html', { root: viewsDir });
+  },
+);
 
 // Existing user page remains available for the API demo UI
 app.get('/users', (_: Request, res: Response) => {

@@ -30,9 +30,17 @@ const schema: Schema<IUser> = {
 /**
  * @entity users
  */
+export type UserRole = 'student' | 'volunteer' | 'admin';
+export type UserStatus = 'active' | 'blocked';
+
 export interface IUser extends Entity {
   name: string;
   email: string;
+  passwordHash?: string;
+  role?: UserRole;
+  status?: UserStatus;
+  resetTokenHash?: string;
+  resetTokenExpiresAt?: Date;
 }
 
 /******************************************************************************

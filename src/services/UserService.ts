@@ -18,8 +18,10 @@ const Errors = {
 /**
  * Get all users.
  */
-function getAll(): Promise<IUser[]> {
-  return UserRepo.getAll();
+async function getAll(): Promise<Partial<IUser>[]> {
+  const users = await UserRepo.getAll();
+
+  return users.map(({ passwordHash, resetTokenHash, resetTokenExpiresAt, ...user }) => user);
 }
 
 /**

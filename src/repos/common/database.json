@@ -1,1 +1,46 @@
-{"users":[{"id":366115170645,"name":"Sean Maxwell","email":"smaxwell@example.com","created":"2024-03-22T05:14:36.252Z"},{"id":310946254456,"name":"John Smith","email":"john.smith@example.com","created":"2024-03-22T05:20:55.079Z"},{"id":143027113460,"name":"Gordan Freeman","email":"nova@prospect.com","created":"2024-03-22T05:42:18.895Z"}]}
+{
+    "users": [
+        {
+            "id": 366115170645,
+            "name": "Sean Maxwell",
+            "email": "smaxwell@example.com",
+            "created": "2024-03-22T05:14:36.252Z"
+        },
+        {
+            "id": 310946254456,
+            "name": "John Smith",
+            "email": "john.smith@example.com",
+            "created": "2024-03-22T05:20:55.079Z"
+        },
+        {
+            "id": 143027113460,
+            "name": "Gordan Freeman",
+            "email": "nova@prospect.com",
+            "created": "2024-03-22T05:42:18.895Z"
+        },
+        {
+            "id": 206923798206,
+            "name": "MKVI Admin",
+            "email": "maheensohailsohailanwar@gmail.com",
+            "passwordHash": "$2b$10$hUB9kEK06qekAsUcPaI78.NmjBeGiexEJfEymRvJLgcTnpKhfEGEG",
+            "role": "admin",
+            "created": "2026-09-06T17:30:18.142Z"
+        },
+        {
+            "id": 223450384706,
+            "name": "Test Student",
+            "email": "student@example.com",
+            "passwordHash": "$2b$10$eSqQ8ymwE65BgzQj3enMheBnv9R2yHLQybRFbulcOlnxdEN4E.oWG",
+            "role": "student",
+            "created": "2026-09-06T20:34:16.459Z"
+        },
+        {
+            "id": 623831736833,
+            "name": "Test Volunteer",
+            "email": "volunteer@example.com",
+            "passwordHash": "$2b$10$dWKEfn5GkZbkJGzBHPUsku0DjgccPrDDt4qxX0yDsaFWgKyj1DuHO",
+            "role": "volunteer",
+            "created": "2026-09-06T20:34:41.572Z"
+        }
+    ]
+}
