@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import logger from 'jet-logger';
 import morgan from 'morgan';
 import path from 'path';
+import mongoose from 'mongoose'; // <-- Mongoose import kiya
 
 import Paths from '@src/common/constants/Paths';
 import { RouteError } from '@src/common/utils/route-errors';
@@ -13,8 +14,10 @@ import EnvVars, { NodeEnvs } from './common/constants/env';
 import cookieParser from 'cookie-parser';
 import { requireAdminPage } from './common/middleware/authMiddleware';
 
+import subjectRoutes from './routes/subjects'; // <-- Subject routes import kiya
+
 /******************************************************************************
-                                Setup
+                Setup
 ******************************************************************************/
 
 const app = express();
@@ -36,6 +39,16 @@ if (EnvVars.NodeEnv === NodeEnvs.DEV) {
 if (EnvVars.NodeEnv === NodeEnvs.PRODUCTION) {
   app.use(helmet());
 }
+
+// **** Database Connection **** //
+// MongoDB Atlas connection setup
+const MONGO_URI = process.env.MONGO_URI || '';
+mongoose.connect(MONGO_URI)
+  .then(() => logger.info('MongoDB connected successfully!'))
+  .catch((err) => logger.err(err, true));
+
+
+// **** Routes Registration **** //
 
 // Add APIs, must be after middleware
 app.use(Paths._, BaseRouter);
@@ -76,7 +89,6 @@ app.get('/admin/login', (_: Request, res: Response) => {
   return res.sendFile('admin-login.html', { root: viewsDir });
 });
 
-
 app.get('/admin/forgot-password', (_: Request, res: Response) => {
   return res.sendFile('admin-forgot-password.html', { root: viewsDir });
 });
@@ -107,7 +119,7 @@ app.get('/users', (_: Request, res: Response) => {
 });
 
 /******************************************************************************
-                                Export default
+                Export default
 ******************************************************************************/
 
 export default app;

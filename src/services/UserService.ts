@@ -1,7 +1,6 @@
 import HttpStatusCodes from '@src/common/constants/HttpStatusCodes';
 import { RouteError } from '@src/common/utils/route-errors';
-import { IUser } from '@src/models/User.model';
-import UserRepo from '@src/repos/UserRepo';
+import UserModel, { IUser } from '@src/models/User.model';
 
 /******************************************************************************
                                 Constants
@@ -19,38 +18,62 @@ const Errors = {
  * Get all users.
  */
 async function getAll(): Promise<Partial<IUser>[]> {
-  const users = await UserRepo.getAll();
+  const users = await UserModel.find()
+    .select('-passwordHash -resetTokenHash -resetTokenExpiresAt')
+    .lean();
 
-  return users.map(({ passwordHash, resetTokenHash, resetTokenExpiresAt, ...user }) => user);
+  return users as unknown as Partial<IUser>[];
 }
 
 /**
  * Add one user.
  */
-function addOne(user: IUser): Promise<void> {
-  return UserRepo.add(user);
+async function addOne(user: IUser): Promise<void> {
+  await UserModel.create(user);
 }
 
 /**
  * Update one user.
  */
-async function updateOne(user: IUser): Promise<void> {
-  const persists = await UserRepo.persists(user.id);
-  if (!persists) {
-    throw new RouteError(HttpStatusCodes.NOT_FOUND, Errors.USER_NOT_FOUND);
+async function updateOne(user: IUser & { _id?: string }): Promise<void> {
+  if (!user._id) {
+    throw new RouteError(
+      HttpStatusCodes.BAD_REQUEST,
+      'User id is required',
+    );
   }
-  return UserRepo.update(user);
+
+  const updatedUser = await UserModel.findByIdAndUpdate(
+    user._id,
+    {
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    },
+    { new: true, runValidators: true },
+  );
+
+  if (!updatedUser) {
+    throw new RouteError(
+      HttpStatusCodes.NOT_FOUND,
+      Errors.USER_NOT_FOUND,
+    );
+  }
 }
 
 /**
- * Delete a user by their id.
+ * Delete a user by their MongoDB id.
  */
-async function deleteOne(id: number): Promise<void> {
-  const persists = await UserRepo.persists(id);
-  if (!persists) {
-    throw new RouteError(HttpStatusCodes.NOT_FOUND, Errors.USER_NOT_FOUND);
+async function deleteOne(id: string): Promise<void> {
+  const deletedUser = await UserModel.findByIdAndDelete(id);
+
+  if (!deletedUser) {
+    throw new RouteError(
+      HttpStatusCodes.NOT_FOUND,
+      Errors.USER_NOT_FOUND,
+    );
   }
-  return UserRepo.delete(id);
 }
 
 /******************************************************************************

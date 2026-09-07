@@ -1,35 +1,37 @@
-import { getRandomInt } from '@src/common/utils/number-utils';
-import { IUser } from '@src/models/User.model';
+import UserModel, { IUser, IUserDocument } from '@src/models/User.model';
 
-import orm from './MockOrm';
-
-/******************************************************************************
-                                Functions
-******************************************************************************/
-
-/**
- * Get one user.
- */
-async function getOne(email: string): Promise<IUser | null> {
-  const db = await orm.openDb();
-  for (const user of db.users) {
-    if (user.email === email) {
-      return user;
-    }
-  }
-  return null;
+function toUser(user: IUserDocument): IUser {
+  return {
+    name: user.name,
+    email: user.email,
+    passwordHash: user.passwordHash,
+    role: user.role,
+    status: user.status,
+    resetTokenHash: user.resetTokenHash,
+    resetTokenExpiresAt: user.resetTokenExpiresAt,
+    created: user.created,
+  };
 }
 
 /**
- * See if a user with the given id exists.
+ * Get one user by email.
+ */
+async function getOne(email: string): Promise<IUser | null> {
+  const user = await UserModel.findOne({
+    email: email.toLowerCase(),
+  }).lean();
+
+  if (!user) {
+    return null;
+  }
+
+  return user as unknown as IUser;
+}
+
+/**
+ * See if a user exists by id.
  */
 async function persists(id: number): Promise<boolean> {
-  const db = await orm.openDb();
-  for (const user of db.users) {
-    if (user.id === id) {
-      return true;
-    }
-  }
   return false;
 }
 
@@ -37,112 +39,69 @@ async function persists(id: number): Promise<boolean> {
  * Get all users.
  */
 async function getAll(): Promise<IUser[]> {
-  const db = await orm.openDb();
-  return db.users;
+  const users = await UserModel.find().lean();
+
+  return users as unknown as IUser[];
 }
 
 /**
  * Add one user.
  */
 async function add(user: IUser): Promise<void> {
-  const db = await orm.openDb();
-  user.id = getRandomInt();
-  db.users.push(user);
-  return orm.saveDb(db);
+  await UserModel.create(user);
 }
 
 /**
- * Update a user.
+ * Update user.
  */
 async function update(user: IUser): Promise<void> {
-  const db = await orm.openDb();
-  for (let i = 0; i < db.users.length; i++) {
-    if (db.users[i].id === user.id) {
-      const dbUser = db.users[i];
-      db.users[i] = {
-        ...dbUser,
-        name: user.name,
-        email: user.email,
-      };
-      return orm.saveDb(db);
-    }
-  }
+  await UserModel.findOneAndUpdate(
+    { email: user.email },
+    {
+      name: user.name,
+      email: user.email,
+    },
+  );
 }
 
 /**
- * Delete one user.
+ * Delete user.
  */
 async function delete_(id: number): Promise<void> {
-  const db = await orm.openDb();
-  for (let i = 0; i < db.users.length; i++) {
-    if (db.users[i].id === id) {
-      db.users.splice(i, 1);
-      return orm.saveDb(db);
-    }
-  }
+  // Old JSON database used numeric IDs.
+  // MongoDB now uses _id.
 }
 
-// **** Unit-Tests Only **** //
-
 /**
- * @testOnly
- *
- * Delete every user record.
+ * Update authentication fields.
  */
+async function updateAuth(user: IUser): Promise<void> {
+  await UserModel.findOneAndUpdate(
+    { email: user.email },
+    {
+      name: user.name,
+      email: user.email,
+      passwordHash: user.passwordHash,
+      role: user.role,
+      status: user.status,
+      resetTokenHash: user.resetTokenHash,
+      resetTokenExpiresAt: user.resetTokenExpiresAt,
+    },
+    { new: true },
+  );
+}
+
 async function deleteAllUsers(): Promise<void> {
-  const db = await orm.openDb();
-  db.users = [];
-  return orm.saveDb(db);
+  await UserModel.deleteMany({});
 }
 
-/**
- * @testOnly
- *
- * Insert multiple users. Can't do multiple at once cause using a plain file
- * for now.
- */
 async function insertMultiple(
   users: IUser[] | readonly IUser[],
 ): Promise<IUser[]> {
-  const db = await orm.openDb(),
-    usersF = [...users];
-  for (const user of usersF) {
-    user.id = getRandomInt();
-    user.created = new Date();
-  }
-  db.users = [...db.users, ...users];
-  await orm.saveDb(db);
-  return usersF;
+  const created = await UserModel.insertMany([...users]);
+
+  return created.map(toUser);
 }
-
-
-/**
- * Update authentication-related fields.
- */
-async function updateAuth(user: IUser): Promise<void> {
-  const db = await orm.openDb();
-
-  for (let i = 0; i < db.users.length; i++) {
-    if (db.users[i].id === user.id) {
-      db.users[i] = {
-        ...db.users[i],
-        name: user.name,
-        email: user.email,
-        passwordHash: user.passwordHash,
-        role: user.role,
-        status: user.status,
-        resetTokenHash: user.resetTokenHash,
-        resetTokenExpiresAt: user.resetTokenExpiresAt,
-      };
-
-      return orm.saveDb(db);
-    }
-  }
-}
-
-/******************************************************************************
-                                Export default
-******************************************************************************/
 
 export default {
   getOne,

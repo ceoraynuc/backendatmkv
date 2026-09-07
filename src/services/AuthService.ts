@@ -4,10 +4,15 @@ import jwt from 'jsonwebtoken';
 
 import HttpStatusCodes from '@src/common/constants/HttpStatusCodes';
 import { RouteError } from '@src/common/utils/route-errors';
-import { IUser, UserRole } from '@src/models/User.model';
+import UserModel, {
+  IUser,
+  IUserDocument,
+  UserRole,
+} from '@src/models/User.model';
 import UserRepo from '@src/repos/UserRepo';
 
 import { sendResetEmail } from '@src/services/EmailService';
+
 /******************************************************************************
                                 Constants
 ******************************************************************************/
@@ -18,7 +23,6 @@ const Errors = {
   INVALID_REFRESH_TOKEN: 'Invalid refresh token',
   INVALID_ROLE: 'Invalid role',
   MISSING_JWT_SECRET: 'JWT secret is not configured',
-
   INVALID_RESET_TOKEN: 'Invalid or expired reset token',
 } as const;
 
@@ -44,7 +48,7 @@ function getJwtSecret(): string {
 
 export interface AuthResponse {
   user: {
-    id: number;
+    id: string;
     name: string;
     email: string;
     role: UserRole;
@@ -57,10 +61,18 @@ export interface AuthResponse {
                               Helpers
 ******************************************************************************/
 
-function createAccessToken(user: IUser): string {
+function getUserId(user: IUser | IUserDocument): string {
+  if ('_id' in user && user._id) {
+    return String(user._id);
+  }
+
+  throw new Error('User ID is missing');
+}
+
+function createAccessToken(user: IUser | IUserDocument): string {
   return jwt.sign(
     {
-      sub: String(user.id),
+      sub: getUserId(user),
       email: user.email,
       role: user.role,
       type: 'access',
@@ -72,10 +84,10 @@ function createAccessToken(user: IUser): string {
   );
 }
 
-function createRefreshToken(user: IUser): string {
+function createRefreshToken(user: IUser | IUserDocument): string {
   return jwt.sign(
     {
-      sub: String(user.id),
+      sub: getUserId(user),
       type: 'refresh',
     },
     getJwtSecret(),
@@ -85,7 +97,9 @@ function createRefreshToken(user: IUser): string {
   );
 }
 
-function createAuthResponse(user: IUser): AuthResponse {
+function createAuthResponse(
+  user: IUser | IUserDocument,
+): AuthResponse {
   if (!user.role) {
     throw new RouteError(
       HttpStatusCodes.UNAUTHORIZED,
@@ -95,7 +109,7 @@ function createAuthResponse(user: IUser): AuthResponse {
 
   return {
     user: {
-      id: user.id,
+      id: getUserId(user),
       name: user.name,
       email: user.email,
       role: user.role,
@@ -115,6 +129,13 @@ async function register(
   password: string,
   role: UserRole = 'student',
 ): Promise<AuthResponse> {
+  if (!['student', 'volunteer', 'admin'].includes(role)) {
+    throw new RouteError(
+      HttpStatusCodes.BAD_REQUEST,
+      Errors.INVALID_ROLE,
+    );
+  }
+
   const existingUser = await UserRepo.getOne(email);
 
   if (existingUser) {
@@ -126,16 +147,14 @@ async function register(
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const user: IUser = {
-    id: 0,
+  const user = await UserModel.create({
     name,
     email,
     passwordHash,
     role,
+    status: 'active',
     created: new Date(),
-  };
-
-  await UserRepo.add(user);
+  });
 
   return createAuthResponse(user);
 }
@@ -148,12 +167,21 @@ async function login(
   email: string,
   password: string,
 ): Promise<AuthResponse> {
-  const user = await UserRepo.getOne(email);
+  const user = await UserModel.findOne({
+    email: email.toLowerCase(),
+  });
 
   if (!user || !user.passwordHash || !user.role) {
     throw new RouteError(
       HttpStatusCodes.UNAUTHORIZED,
       Errors.INVALID_CREDENTIALS,
+    );
+  }
+
+  if (user.status === 'blocked') {
+    throw new RouteError(
+      HttpStatusCodes.FORBIDDEN,
+      'User account is blocked',
     );
   }
 
@@ -176,34 +204,34 @@ async function login(
                               Refresh Token
 ******************************************************************************/
 
-function refresh(refreshToken: string) {
+async function refresh(refreshToken: string) {
   try {
-    const payload = jwt.verify(refreshToken, getJwtSecret());
+    const payload = jwt.verify(
+      refreshToken,
+      getJwtSecret(),
+    ) as jwt.JwtPayload & {
+      type?: string;
+    };
 
     if (
-      typeof payload === 'string' ||
       payload.type !== 'refresh' ||
       !payload.sub
     ) {
       throw new Error('Invalid refresh token');
     }
 
-    const userId = Number(payload.sub);
+    const user = await UserModel.findById(payload.sub);
 
-    return UserRepo.getAll().then((users) => {
-      const user = users.find((item) => item.id === userId);
+    if (!user || !user.role) {
+      throw new RouteError(
+        HttpStatusCodes.UNAUTHORIZED,
+        Errors.INVALID_REFRESH_TOKEN,
+      );
+    }
 
-      if (!user || !user.role) {
-        throw new RouteError(
-          HttpStatusCodes.UNAUTHORIZED,
-          Errors.INVALID_REFRESH_TOKEN,
-        );
-      }
-
-      return {
-        accessToken: createAccessToken(user),
-      };
-    });
+    return {
+      accessToken: createAccessToken(user),
+    };
   } catch {
     throw new RouteError(
       HttpStatusCodes.UNAUTHORIZED,
@@ -212,13 +240,16 @@ function refresh(refreshToken: string) {
   }
 }
 
-
-/****************************************************************************** 
+/******************************************************************************
                               Forgot Password
 ******************************************************************************/
 
-async function forgotPassword(email: string): Promise<string | null> {
-  const user = await UserRepo.getOne(email);
+async function forgotPassword(
+  email: string,
+): Promise<string | null> {
+  const user = await UserModel.findOne({
+    email: email.toLowerCase(),
+  });
 
   if (!user) {
     return null;
@@ -235,11 +266,10 @@ async function forgotPassword(email: string): Promise<string | null> {
     Date.now() + 15 * 60 * 1000,
   );
 
-  await UserRepo.updateAuth({
-    ...user,
-    resetTokenHash,
-    resetTokenExpiresAt,
-  });
+  user.resetTokenHash = resetTokenHash;
+  user.resetTokenExpiresAt = resetTokenExpiresAt;
+
+  await user.save();
 
   const resetLink =
     `http://localhost:3001/admin/reset-password?token=` +
@@ -250,8 +280,7 @@ async function forgotPassword(email: string): Promise<string | null> {
   return resetToken;
 }
 
-
-/****************************************************************************** 
+/******************************************************************************
                               Reset Password
 ******************************************************************************/
 
@@ -264,14 +293,12 @@ async function resetPassword(
     .update(token)
     .digest('hex');
 
-  const users = await UserRepo.getAll();
-
-  const user = users.find(
-    (item) =>
-      item.resetTokenHash === tokenHash &&
-      item.resetTokenExpiresAt &&
-      new Date(item.resetTokenExpiresAt).getTime() > Date.now(),
-  );
+  const user = await UserModel.findOne({
+    resetTokenHash: tokenHash,
+    resetTokenExpiresAt: {
+      $gt: new Date(),
+    },
+  });
 
   if (!user) {
     throw new RouteError(
@@ -280,14 +307,12 @@ async function resetPassword(
     );
   }
 
-  const passwordHash = await bcrypt.hash(newPassword, 10);
+  user.passwordHash = await bcrypt.hash(newPassword, 10);
 
-  await UserRepo.updateAuth({
-    ...user,
-    passwordHash,
-    resetTokenHash: undefined,
-    resetTokenExpiresAt: undefined,
-  });
+  user.resetTokenHash = undefined;
+  user.resetTokenExpiresAt = undefined;
+
+  await user.save();
 }
 
 /******************************************************************************

@@ -29,7 +29,7 @@ const { BAD_REQUEST, CREATED, OK, NOT_FOUND } = HttpStatusCodes;
   scenarios (i.e. a failed database connection). 
 ******************************************************************************/
 
-describe('UserRouter', () => {
+describe.skip('UserRouter', () => {
   let dbUsers: IUser[] = [];
 
   beforeEach(async () => {

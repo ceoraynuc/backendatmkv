@@ -1,22 +1,8 @@
-import { isNumber } from 'jet-validators';
-import { transform } from 'jet-validators/utils';
-
 import HttpStatusCodes from '@src/common/constants/HttpStatusCodes';
-import User from '@src/models/User.model';
+import { IUser } from '@src/models/User.model';
 import UserService from '@src/services/UserService';
 
 import { Req, Res } from './common/express-types';
-import parseReq from './common/parseReq';
-
-/******************************************************************************
-                                Constants
-******************************************************************************/
-
-const reqValidators = {
-  add: parseReq({ user: User.isComplete }),
-  update: parseReq({ user: User.isComplete }),
-  delete: parseReq({ id: transform(Number, isNumber) }),
-} as const;
 
 /******************************************************************************
                                 Functions
@@ -38,8 +24,10 @@ async function getAll(_: Req, res: Res) {
  * @route POST /api/users/add
  */
 async function add(req: Req, res: Res) {
-  const { user } = reqValidators.add(req.body);
+  const user = req.body as unknown as IUser;
+
   await UserService.addOne(user);
+
   res.status(HttpStatusCodes.CREATED).end();
 }
 
@@ -49,8 +37,10 @@ async function add(req: Req, res: Res) {
  * @route PUT /api/users/update
  */
 async function update(req: Req, res: Res) {
-  const { user } = reqValidators.update(req.body);
+const user = req.body as unknown as IUser & { _id?: string };
+
   await UserService.updateOne(user);
+
   res.status(HttpStatusCodes.OK).end();
 }
 
@@ -60,8 +50,10 @@ async function update(req: Req, res: Res) {
  * @route DELETE /api/users/delete/:id
  */
 async function delete_(req: Req, res: Res) {
-  const { id } = reqValidators.delete(req.params);
+  const { id } = req.params;
+
   await UserService.delete(id);
+
   res.status(HttpStatusCodes.OK).end();
 }
 
