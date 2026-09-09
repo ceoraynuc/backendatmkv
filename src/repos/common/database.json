@@ -19,14 +19,6 @@
             "created": "2024-03-22T05:42:18.895Z"
         },
         {
-            "id": 206923798206,
-            "name": "MKVI Admin",
-            "email": "maheensohail148@gmail.com",
-            "passwordHash": "$2b$10$hUB9kEK06qekAsUcPaI78.NmjBeGiexEJfEymRvJLgcTnpKhfEGEG",
-            "role": "admin",
-            "created": "2026-09-06T17:30:18.142Z"
-        },
-        {
             "id": 223450384706,
             "name": "Test Student",
             "email": "student@example.com",

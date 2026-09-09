@@ -14,7 +14,11 @@ import EnvVars, { NodeEnvs } from './common/constants/env';
 import cookieParser from 'cookie-parser';
 import { requireAdminPage } from './common/middleware/authMiddleware';
 
-import subjectRoutes from './routes/subjects'; // <-- Subject routes import kiya
+import subjectRoutes from './routes/subjects'; 
+import quizRoutes from './routes/quizzes';
+import questionRoutes from './routes/question';
+import progressRoutes from './routes/progress';
+
 
 /******************************************************************************
                 Setup
@@ -52,6 +56,11 @@ mongoose.connect(MONGO_URI)
 
 // Add APIs, must be after middleware
 app.use(Paths._, BaseRouter);
+
+app.use('/api/subjects', subjectRoutes);
+app.use('/api/quizzes', quizRoutes);
+app.use('/api/questions', questionRoutes);
+app.use('/api/user/progress', progressRoutes);
 
 // Add error handler
 app.use((err: Error, _: Request, res: Response, next: NextFunction) => {
